@@ -29,6 +29,7 @@ router.replace('/myTrip')
   .then((userCredential) => {
     // Signed in 
     const user = userCredential.user;
+    router.replace('/myTrip')
     console.log(user);
     // ...
   })
