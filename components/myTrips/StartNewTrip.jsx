@@ -1,10 +1,17 @@
 import { View, Text } from 'react-native'
 import React from 'react'
-
-export default function startNewTrip() {
+import {Colors} from './../../constants/Colors';
+import Ionicons from '@expo/vector-icons/Ionicons';
+export default function StartNewTrip() {
   return (
-    <View>
-      <Text>startNewTrip</Text>
+    <View style={{
+      padding:20,
+      margin:50,
+      display:'flex',
+      alignItems:'center',
+      }}>
+        <Ionicons name="location-sharp" size={24} color="black" />
+        <text>"</text>
     </View>
   )
 }

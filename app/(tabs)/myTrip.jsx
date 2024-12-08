@@ -19,10 +19,6 @@ export default function myTrip() {
         alignContent:'center',
         justifyContent:'space-between',
       }}>
-      <Text style = {{
-        fontFamily:'outfit-Bold',
-        fontSize:24,
-      }}>No Trips planned yet!</Text>
       <Ionicons style = {{marginLeft:'-500'}}name="add-circle-outline" size={30} color="black" />
       </View>
       {userTrips?.length==0?

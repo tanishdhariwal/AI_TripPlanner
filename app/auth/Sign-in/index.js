@@ -25,7 +25,6 @@ const onSignIn=()=>{
         ToastAndroid.show("Please enter all details",ToastAndroid.CENTER)
     }
 signInWithEmailAndPassword(auth, email, password)
-router.replace('/myTrip')
   .then((userCredential) => {
     // Signed in 
     const user = userCredential.user;
