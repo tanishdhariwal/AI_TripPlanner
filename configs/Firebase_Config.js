@@ -2,13 +2,14 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
+const dotenv = require('dotenv').config();
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyA983SsOP5emYVNoFJfk6uSpz1C_kIzmgE",
+  apikey: process.env.GOOGLE_API,
   authDomain: "aitripplanner-3b773.firebaseapp.com",
   projectId: "aitripplanner-3b773",
   storageBucket: "aitripplanner-3b773.firebasestorage.app",

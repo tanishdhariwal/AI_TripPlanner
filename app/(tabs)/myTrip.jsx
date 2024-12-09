@@ -1,4 +1,4 @@
-import { View, Text } from 'react-native'
+import { View, Text, TouchableOpacity } from 'react-native'
 import React, { useState } from 'react'
 import {Colors} from './../../constants/Colors';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -10,7 +10,7 @@ export default function myTrip() {
       backgroundColor:Colors.WHITE,
       height:'100%',
       padding:20,
-      paddingTop:'25%',
+      paddingTop:55,
       
     }}>
       <View style={{
@@ -19,7 +19,11 @@ export default function myTrip() {
         alignContent:'center',
         justifyContent:'space-between',
       }}>
-      <Ionicons style = {{marginLeft:'-500'}}name="add-circle-outline" size={30} color="black" />
+        <Text style={{
+          fontFamily:'outfit-Medium',
+          fontSize:30,
+        }}>My Trips</Text>
+      <Ionicons name="add-circle-outline" size={30} color="black" />
       </View>
       {userTrips?.length==0?
       <StartNewTrip/>
