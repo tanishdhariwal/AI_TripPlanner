@@ -14,9 +14,9 @@ export default function SearchPlace() {
             headerTitle:"Search",
         })
     },[])
-    // useEffect(()=>{
-    //   console.log(tripData);
-    // },[tripData])
+    useEffect(()=>{
+      console.log(tripData);
+    },[tripData])
   return (
     <View style = {{
         padding:20,
@@ -41,7 +41,7 @@ export default function SearchPlace() {
             url:details?.url,
           }
         });
-        router.push('/Create_trip/selectTraveler');
+        router.push('/Create_trip/SelectTraveler');
       }}
       query={{
         key: process.env.EXPO_PUBLIC_GOOGLE_MAP_KEY,
