@@ -29,7 +29,8 @@ signInWithEmailAndPassword(auth, email, password)
     // Signed in 
     const user = userCredential.user;
     router.replace('/myTrip')
-    console.log(user);
+    console.log(user.email);
+    console.log(user.uid);
     // ...
   })
   .catch((error) => {
