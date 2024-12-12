@@ -14,9 +14,9 @@ export default function SearchPlace() {
             headerTitle:"Search",
         })
     },[])
-    useEffect(()=>{
-      console.log(tripData);
-    },[tripData])
+    // useEffect(()=>{
+    //   console.log(tripData);
+    // },[tripData])
   return (
     <View style = {{
         padding:20,

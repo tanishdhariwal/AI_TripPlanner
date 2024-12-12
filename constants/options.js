@@ -28,3 +28,18 @@ export const SelectTravelersList = [
     },
 
 ]
+
+export const SelectBudgetOptions = [
+    {id : 1,
+        title : 'Low Price',
+        desc : 'Budget Friendly, spend conciously',
+    },
+    {id : 2,
+        title : 'Medium Price',
+        desc : 'Spend a little more for a better experience',
+    },
+    {id : 3,
+        title : 'High Price',
+        desc : 'Spend lavishly for the best experience',
+    },
+]

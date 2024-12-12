@@ -14,7 +14,9 @@ export default function RootLayout() {
   <createTripContext.Provider value = {{tripData, setTripData}}> 
 
     <Stack screenOptions={{
-      headerShown:false
+      headerShown:true,
+      headerTransparent:true,
+      headerTitle:'',
     }}>
       {/* <Stack.Screen name="index" options={{
         headerShown:false
