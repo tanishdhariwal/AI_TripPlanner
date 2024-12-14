@@ -34,12 +34,14 @@ export default function GenerateTrip() {
             const result = await chatSession.sendMessage(Final_Prompt);
             console.log("AI Response: ", result.response.text());
             const tripResponse = JSON.parse(result.response.text());
-            console.log("Parsed Trip Response: ", tripResponse);
+            //console.log("Parsed Trip Response: ", tripResponse);
 
             const docID = (Date.now()).toString();
             await setDoc(doc(db, "UserTrips", docID), {
                 userEmail: user.email,
-                tripData: tripResponse,
+                tripPlan: tripResponse,
+                tripData: JSON.stringify(tripData),
+                docID: docID
             });
             console.log("Document successfully written!");
 

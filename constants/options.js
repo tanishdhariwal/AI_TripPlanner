@@ -44,4 +44,57 @@ export const SelectBudgetOptions = [
     },
 ]
 
-export const AIPrompt = "Generate travel plan for location: {location}, for {TotalDay} days and {TotalNight} nights for {Traveler} with a {budget} Budget with Flight Details, Flight Price for with booking URL, Hotel Options list with hotel names, hotel addresses, hotel image url, geo coordinates, rating, description and places to visit nearby with place name, details, image url, geo coordinates, ticket pricing if any, time taken for travelling to each location for {TotalDay} days and {TotalNight} nights. Also provide the total cost of the trip and the total time taken for the trip, give each days plan to the user and give best time to visit. Make sure to give all these details in  the JSON Format."
+export const AIPrompt = `Create a detailed travel plan for {location} spanning {TotalDay} days and {TotalNight} nights for {Traveler}. The budget for the trip is {budget}. The plan should include:
+
+Flight Details:
+
+- Departure and return flight details (airlines, departure time, arrival time).
+- Flight prices.
+- Booking URLs for each flight.
+
+Accommodation Options:
+
+- List of hotel options with:
+  - Hotel names.
+  - Full addresses.
+  - Hotel image URLs.
+  - Geo-coordinates.
+  - Ratings and reviews.
+  - Description of amenities and services.
+  - Total cost for the stay.
+
+Daily Itinerary:
+
+- Detailed day-by-day plan covering {TotalDay} days and {TotalNight} nights.
+- Activities, sightseeing spots, and experiences for each day.
+- Places to visit each day, including:
+  - Place name, detailed description, and image URLs.
+  - Geo-coordinates of the places.
+  - Entry ticket pricing (if applicable).
+  - Time required to travel to each location.
+  - Suggested time to spend at each location.
+- Local transport options for traveling between spots.
+
+Total Cost Calculation:
+
+- Breakdown of the total cost, including flights, accommodation, entry tickets, and local transport.
+
+Total Travel Time:
+
+- Cumulative time taken for all activities, including inter-location travel.
+
+Best Time to Visit:
+
+- Recommended months or seasons to visit {location} based on weather and attractions.
+
+Format: Provide all details in structured JSON format, including:
+
+- Flight Information
+- Hotel Options
+- Daily Itinerary
+- Cost Breakdown
+- Travel Time Summary
+- Best Time to Visit
+
+Ensure that the response is comprehensive, detailed, and accurate for {Traveler}'s preferences.`;
+
