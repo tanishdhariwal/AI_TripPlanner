@@ -28,7 +28,7 @@ signInWithEmailAndPassword(auth, email, password)
   .then((userCredential) => {
     // Signed in 
     const user = userCredential.user;
-    router.replace('/myTrip')
+    router.replace('/MyTrip')
     console.log(user.email);
     console.log(user.uid);
     // ...

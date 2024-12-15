@@ -14,7 +14,7 @@ export default function TabLayout() {
     <Tabs screenOptions={{
       headerShown:false
     }}>
-        <Tabs.Screen name = "myTrip"
+        <Tabs.Screen name = "MyTrip"
         options={{
           tabBarIcon:()=><Ionicons name="location-sharp" size={24} color="black" />,
           tabBarLabel:'My Trip'
@@ -24,7 +24,7 @@ export default function TabLayout() {
           tabBarIcon:()=><Ionicons name="globe-sharp" size={24} color="black" />,
           tabBarLabel:'Discover'
         }}/>    
-        <Tabs.Screen name = "profile"
+        <Tabs.Screen name = "Profile"
          options={{
           tabBarIcon:()=><Ionicons name="person-circle" size={24} color="black" />,
           tabBarLabel:'Profile'

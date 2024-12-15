@@ -13,7 +13,7 @@ export default function Index() {
       }}
     >
       {user?
-      <Redirect href={'/myTrip'}/>:
+      <Redirect href={'/(tabs)/MyTrip'}/>:
       <Login/>
       }
     </View>

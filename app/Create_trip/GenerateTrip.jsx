@@ -45,7 +45,7 @@ export default function GenerateTrip() {
             });
             console.log("Document successfully written!");
 
-            router.push('(tabs)/myTrip');
+            router.push('(tabs)/MyTrip');
         } catch (error) {
             console.error("Error in GenAITrip: ", error);
         } finally {
