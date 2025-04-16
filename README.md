@@ -1,50 +1,68 @@
-# Welcome to your Expo app 👋
+# AI TripPlanner
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**AI TripPlanner** is a mobile application built to generate detailed travel plans using AI-driven insights. The app allows users to search for destinations, specify their travel dates, choose a traveler type and budget, and then uses Google's Generative AI to generate an itinerary. Users can authenticate using Firebase and view, review, and save planned trips.
 
-## Get started
+## Tech Stack
 
-1. Install dependencies
+- **React Native** with [Expo](https://expo.dev)  
+  Provides the core framework for building cross-platform mobile apps.
 
-   ```bash
+- **Expo Router**  
+  Implements file-based navigation (see [app/_layout.jsx](app/_layout.jsx)).
+
+- **Firebase**  
+  - **Firebase Auth:** For user authentication ([configs/Firebase_Config.js](configs/Firebase_Config.js))
+  - **Firebase Firestore:** To store and retrieve trip data.
+
+- **Google Generative AI API**  
+  Used to build and process detailed travel itineraries based on custom prompts ([configs/AIModel.js](configs/AIModel.js)).
+
+- **Expo Font**  
+  For loading and using custom fonts (see [assets/fonts](assets/fonts) and [app/(tabs)/_layout.jsx](app/(tabs)/_layout.jsx)).
+
+- **Other Dependencies:**  
+  - **moment:** For date formatting and manipulation.
+  - **react-native-calendar-picker:** For selecting travel dates ([app/Create_trip/SelectDate.jsx](app/Create_trip/SelectDate.jsx)).
+  - **react-native-google-places-autocomplete:** For searching places ([app/Create_trip/SearchPlace.jsx](app/Create_trip/SearchPlace.jsx)).
+  - **Various Expo packages:** For icons, status-bar, linear gradients, etc.
+
+## Project Structure
+
+- **app/** – Contains the main screens and navigation:
+  - Authentication screens in `app/auth`
+  - Trip creation flow in `app/Create_trip`
+  - Tabbed screens under `app/(tabs)`
+  
+- **components/** – Reusable UI components (e.g. `Login.jsx`, `UserTripCard.jsx`).
+
+- **configs/** – Configuration files for Firebase and the AI model.
+
+- **constants/** – Application constants such as color themes and options.
+
+- **context/** – React contexts used to share state (e.g. `createTripContext.js`).
+
+- **scripts/** – Utility scripts (e.g. `reset-project.js`).
+
+## Getting Started
+
+1. **Install Dependencies**
+
+   ```sh
    npm install
    ```
 
-2. Start the app
+2. **Start the App**
 
-   ```bash
-    npx expo start
+   ```sh
+   npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+Follow the in-terminal instructions to open the app in an emulator or on your device.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Additional Information
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- Custom fonts are loaded via `expo-font` and used across the app.
+- Detailed trip planning is powered by a pre-defined AI prompt stored in [constants/options.js](constants/options.js).
+- The app uses Firebase for both authentication and data storage (trip plans).
 
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Happy coding!
