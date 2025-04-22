@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Image, StyleSheet, ActivityIndicator, TouchableOpacity, Linking, FlatList } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { View, ScrollView, Image, StyleSheet, ActivityIndicator, TouchableOpacity, Linking } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../configs/Firebase_Config';
@@ -7,47 +7,65 @@ import { Colors } from '../../constants/Colors';
 import moment from 'moment';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
+import AppText from '../../components/ui/AppText';
+import AppButton from '../../components/ui/AppButton';
+import AppCard from '../../components/ui/AppCard';
 
 export default function TripDetails() {
   const { tripId } = useLocalSearchParams();
   const [tripData, setTripData] = useState(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
+    isMountedRef.current = true;
+
     if (tripId) {
       fetchTripDetails();
     }
+
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [tripId]);
 
-  const fetchTripDetails = async () => {
+  const fetchTripDetails = useCallback(async () => {
+    if (!tripId) return;
+
     try {
       const docRef = doc(db, "UserTrips", tripId);
       const docSnap = await getDoc(docRef);
 
-      if (docSnap.exists()) {
-        setTripData(docSnap.data());
-      } else {
-        console.log("No such document!");
+      if (isMountedRef.current) {
+        if (docSnap.exists()) {
+          setTripData(docSnap.data());
+        } else {
+          console.log("No such document!");
+        }
+        setLoading(false);
       }
     } catch (error) {
       console.error("Error fetching trip details:", error);
-    } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [tripId]);
 
-  const openUrl = (url) => {
+  const openUrl = useCallback((url) => {
     if (url && url.startsWith('http')) {
       Linking.openURL(url);
     }
-  };
+  }, []);
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.BLACK} />
-        <Text style={styles.loadingText}>Loading trip details...</Text>
+        <ActivityIndicator size="large" color={Colors.PRIMARY} />
+        <AppText variant="body" color="secondary" style={styles.loadingText}>
+          Loading trip details...
+        </AppText>
       </View>
     );
   }
@@ -55,25 +73,27 @@ export default function TripDetails() {
   if (!tripData) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Trip not found</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.buttonPrimary}>
-          <Text style={styles.buttonPrimaryText}>Go Back</Text>
-        </TouchableOpacity>
+        <AppText variant="h4" style={styles.errorText}>Trip not found</AppText>
+        <AppButton 
+          title="Go Back" 
+          onPress={() => router.back()} 
+          variant="outline"
+        />
       </View>
     );
   }
 
-  const parsedTripData = JSON.parse(tripData.tripData || '{}');
+  let parsedTripData = {};
+  try {
+    parsedTripData = JSON.parse(tripData.tripData || '{}');
+  } catch (error) {
+    console.error("Error parsing trip data:", error);
+  }
+  
   const tripPlan = tripData.tripPlan || {};
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
-      </View>
-
+    <View style={styles.container}>
       {/* Hero Section with Image and Title */}
       <View style={styles.heroContainer}>
         <Image 
@@ -87,326 +107,395 @@ export default function TripDetails() {
           style={styles.heroImage}
         />
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.8)']}
+          colors={['transparent', 'rgba(0,0,0,0.9)']}
           style={styles.gradient}
+        />
+        
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.back()}
         >
-          <Text style={styles.tripName}>{tripPlan.trip_name || "Your Trip"}</Text>
-          <Text style={styles.heroTitle}>{tripPlan.location || parsedTripData?.locationInfo?.name}</Text>
-          <View style={styles.tripMeta}>
-            <Text style={styles.tripMetaText}>
-              {moment(parsedTripData?.startDate).format('DD MMM')} - {moment(parsedTripData?.endDate).format('DD MMM YYYY')}
-            </Text>
-            <Text style={styles.tripMetaText}>
-              {parsedTripData?.traveler?.title || tripPlan.travelers}
-            </Text>
-          </View>
-        </LinearGradient>
-      </View>
-
-      {/* Trip Summary */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Trip Summary</Text>
-        <View style={styles.card}>
-          <View style={styles.infoRow}>
-            <Ionicons name="calendar-outline" size={22} color={Colors.GRAY} />
-            <Text style={styles.infoText}>
-              Duration: {parsedTripData.TotalDays || tripPlan.duration} days
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="people-outline" size={22} color={Colors.GRAY} />
-            <Text style={styles.infoText}>{parsedTripData?.traveler?.title || tripPlan.travelers}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="cash-outline" size={22} color={Colors.GRAY} />
-            <Text style={styles.infoText}>Budget: {parsedTripData.Budget || tripPlan.budget}</Text>
-          </View>
-          {tripPlan.best_time_to_visit && (
-            <View style={styles.infoRow}>
-              <Ionicons name="time-outline" size={22} color={Colors.GRAY} />
-              <Text style={styles.infoText}>Best time to visit: {tripPlan.best_time_to_visit}</Text>
+          <Ionicons name="arrow-back" size={24} color={Colors.WHITE} />
+        </TouchableOpacity>
+        
+        <View style={styles.heroContent}>
+          <AppText variant="caption" color="secondary">
+            {tripPlan.trip_name || "AI Generated Trip"}
+          </AppText>
+          <AppText variant="h2" style={styles.locationText}>
+            {tripPlan.location || parsedTripData?.locationInfo?.name || "Trip Destination"}
+          </AppText>
+          
+          <View style={styles.metaInfo}>
+            <View style={styles.metaItem}>
+              <Ionicons name="calendar-outline" size={16} color={Colors.TEXT_SECONDARY} />
+              <AppText variant="body2" color="secondary" style={styles.metaText}>
+                {parsedTripData?.startDate && parsedTripData?.endDate ? 
+                  `${moment(parsedTripData.startDate).format('DD MMM')} - ${moment(parsedTripData.endDate).format('DD MMM YYYY')}` : 
+                  "Date not specified"
+                }
+              </AppText>
             </View>
-          )}
-          {tripPlan.total_trip_cost && (
-            <View style={styles.infoRow}>
-              <Ionicons name="wallet-outline" size={22} color={Colors.GRAY} />
-              <Text style={styles.infoText}>Estimated cost: {tripPlan.total_trip_cost}</Text>
+            
+            <View style={styles.metaItem}>
+              <Ionicons name="people-outline" size={16} color={Colors.TEXT_SECONDARY} />
+              <AppText variant="body2" color="secondary" style={styles.metaText}>
+                {parsedTripData?.traveler?.title || tripPlan.travelers || "Travelers"}
+              </AppText>
             </View>
-          )}
-          {tripPlan.total_trip_time && (
-            <View style={styles.infoRow}>
-              <Ionicons name="hourglass-outline" size={22} color={Colors.GRAY} />
-              <Text style={styles.infoText}>{tripPlan.total_trip_time}</Text>
-            </View>
-          )}
+          </View>
         </View>
       </View>
 
-      {/* Flight Information */}
-      {tripPlan.flight_details && (
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Trip Summary */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Flight Details</Text>
-          <View style={styles.card}>
-            <View style={styles.infoRow}>
-              <Ionicons name="airplane-outline" size={22} color={Colors.GRAY} />
-              <Text style={styles.infoText}>
-                {tripPlan.flight_details.recommended_airline || "Recommended Airlines"}
-              </Text>
+          <AppText variant="h4" style={styles.sectionTitle}>Trip Summary</AppText>
+          <AppCard style={styles.summaryCard}>
+            <View style={styles.summaryItem}>
+              <Ionicons name="calendar-outline" size={20} color={Colors.PRIMARY} />
+              <View style={styles.summaryTextContainer}>
+                <AppText variant="caption" color="secondary">Duration</AppText>
+                <AppText variant="subtitle2">
+                  {parsedTripData.TotalDays || tripPlan.duration || "Not specified"}
+                </AppText>
+              </View>
             </View>
             
-            {tripPlan.flight_details.departure_city && (
-              <View style={styles.infoRow}>
-                <Ionicons name="location-outline" size={22} color={Colors.GRAY} />
-                <Text style={styles.infoText}>From: {tripPlan.flight_details.departure_city}</Text>
+            <View style={styles.summaryItem}>
+              <Ionicons name="people-outline" size={20} color={Colors.ACCENT_2} />
+              <View style={styles.summaryTextContainer}>
+                <AppText variant="caption" color="secondary">Travelers</AppText>
+                <AppText variant="subtitle2">
+                  {parsedTripData?.traveler?.title || tripPlan.travelers || "Not specified"}
+                </AppText>
               </View>
-            )}
+            </View>
             
-            {tripPlan.flight_details.arrival_city && (
-              <View style={styles.infoRow}>
-                <Ionicons name="location-outline" size={22} color={Colors.GRAY} />
-                <Text style={styles.infoText}>To: {tripPlan.flight_details.arrival_city}</Text>
+            <View style={styles.summaryItem}>
+              <Ionicons name="cash-outline" size={20} color={Colors.ACCENT_3} />
+              <View style={styles.summaryTextContainer}>
+                <AppText variant="caption" color="secondary">Budget</AppText>
+                <AppText variant="subtitle2">
+                  {parsedTripData.Budget || tripPlan.budget || "Not specified"}
+                </AppText>
               </View>
-            )}
+            </View>
             
-            {tripPlan.flight_details.price_range && (
-              <View style={styles.infoRow}>
-                <Ionicons name="pricetag-outline" size={22} color={Colors.GRAY} />
-                <Text style={styles.infoText}>{tripPlan.flight_details.price_range}</Text>
-              </View>
-            )}
-            
-            {tripPlan.flight_details.booking_url && (
-              <TouchableOpacity 
-                style={styles.linkButton}
-                onPress={() => openUrl(tripPlan.flight_details.booking_url)}
-              >
-                <Ionicons name="link-outline" size={22} color={Colors.WHITE} />
-                <Text style={styles.linkButtonText}>Book Flight</Text>
-              </TouchableOpacity>
-            )}
-            
-            {tripPlan.flight_details.example_flight && (
-              <View style={styles.subCard}>
-                <Text style={styles.subCardTitle}>Example Flight</Text>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Airline:</Text>
-                  <Text style={styles.infoText}>{tripPlan.flight_details.example_flight.airline}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Departure:</Text>
-                  <Text style={styles.infoText}>{tripPlan.flight_details.example_flight.departure_time}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Arrival:</Text>
-                  <Text style={styles.infoText}>{tripPlan.flight_details.example_flight.arrival_time}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Price:</Text>
-                  <Text style={styles.infoText}>{tripPlan.flight_details.example_flight.price}</Text>
+            {tripPlan.best_time_to_visit && (
+              <View style={styles.summaryItem}>
+                <Ionicons name="time-outline" size={20} color={Colors.ACCENT_1} />
+                <View style={styles.summaryTextContainer}>
+                  <AppText variant="caption" color="secondary">Best time to visit</AppText>
+                  <AppText variant="subtitle2">{tripPlan.best_time_to_visit}</AppText>
                 </View>
               </View>
             )}
-          </View>
+            
+            {tripPlan.total_trip_cost && (
+              <View style={styles.totalCostContainer}>
+                <AppText variant="caption" color="secondary">ESTIMATED TOTAL COST</AppText>
+                <AppText variant="subtitle1" color="primary">
+                  {tripPlan.total_trip_cost}
+                </AppText>
+              </View>
+            )}
+          </AppCard>
         </View>
-      )}
 
-      {/* Hotel Options */}
-      {tripPlan.hotel_options && tripPlan.hotel_options.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Accommodation Options</Text>
-          {tripPlan.hotel_options.map((hotel, index) => (
-            <View key={index} style={styles.card}>
-              <Text style={styles.cardTitle}>{hotel.hotel_name}</Text>
-              <Text style={styles.cardSubtitle}>{hotel.hotel_address}</Text>
+        {/* Flight Information */}
+        {tripPlan.flight_details && (
+          <View style={styles.section}>
+            <AppText variant="h4" style={styles.sectionTitle}>Flight Details</AppText>
+            <AppCard style={styles.flightCard}>
+              <View style={styles.flightHeader}>
+                <View style={styles.flightRoute}>
+                  <AppText variant="body2" color="secondary">
+                    {tripPlan.flight_details.departure_city || "Your City"}
+                  </AppText>
+                  <View style={styles.flightRouteConnector}>
+                    <View style={styles.flightLine} />
+                    <Ionicons name="airplane" size={18} color={Colors.PRIMARY} />
+                    <View style={styles.flightLine} />
+                  </View>
+                  <AppText variant="body2" color="secondary">
+                    {tripPlan.flight_details.arrival_city || "Destination"}
+                  </AppText>
+                </View>
+                
+                <View style={styles.airlineBadge}>
+                  <AppText variant="caption" color="secondary">
+                    {tripPlan.flight_details.recommended_airline || "Recommended Airline"}
+                  </AppText>
+                </View>
+              </View>
               
-              <View style={styles.hotelDetailsRow}>
-                {hotel.rating && (
-                  <View style={styles.ratingContainer}>
-                    <Ionicons name="star" size={16} color="#FFD700" />
-                    <Text style={styles.ratingText}>{hotel.rating}</Text>
+              {tripPlan.flight_details.price_range && (
+                <View style={styles.priceContainer}>
+                  <AppText variant="caption" color="secondary">PRICE RANGE</AppText>
+                  <AppText variant="subtitle2">{tripPlan.flight_details.price_range}</AppText>
+                </View>
+              )}
+              
+              {tripPlan.flight_details.example_flight && (
+                <View style={styles.exampleFlightContainer}>
+                  <AppText variant="caption" color="secondary">SAMPLE FLIGHT</AppText>
+                  <View style={styles.exampleFlightDetails}>
+                    <View style={styles.flightDetail}>
+                      <AppText variant="caption" color="secondary">Airline</AppText>
+                      <AppText variant="body2">
+                        {tripPlan.flight_details.example_flight.airline}
+                      </AppText>
+                    </View>
+                    
+                    <View style={styles.flightDetail}>
+                      <AppText variant="caption" color="secondary">Departure</AppText>
+                      <AppText variant="body2">
+                        {tripPlan.flight_details.example_flight.departure_time}
+                      </AppText>
+                    </View>
+                    
+                    <View style={styles.flightDetail}>
+                      <AppText variant="caption" color="secondary">Arrival</AppText>
+                      <AppText variant="body2">
+                        {tripPlan.flight_details.example_flight.arrival_time}
+                      </AppText>
+                    </View>
+                    
+                    <View style={styles.flightDetail}>
+                      <AppText variant="caption" color="secondary">Price</AppText>
+                      <AppText variant="body2">
+                        {tripPlan.flight_details.example_flight.price}
+                      </AppText>
+                    </View>
+                  </View>
+                </View>
+              )}
+              
+              {tripPlan.flight_details.booking_url && (
+                <AppButton 
+                  title="Book Flight"
+                  onPress={() => openUrl(tripPlan.flight_details.booking_url)}
+                  variant="primary" 
+                  size="small"
+                  icon={<Ionicons name="open-outline" size={18} color={Colors.WHITE} style={{marginLeft: 8}} />}
+                  style={styles.bookButton}
+                />
+              )}
+            </AppCard>
+          </View>
+        )}
+
+        {/* Hotel Options */}
+        {tripPlan.hotel_options && tripPlan.hotel_options.length > 0 && (
+          <View style={styles.section}>
+            <AppText variant="h4" style={styles.sectionTitle}>Accommodation Options</AppText>
+            
+            {tripPlan.hotel_options.map((hotel, index) => (
+              <AppCard key={index} style={styles.hotelCard}>
+                <AppText variant="subtitle1">{hotel.hotel_name || "Hotel"}</AppText>
+                <AppText variant="caption" color="secondary" style={styles.hotelAddress}>
+                  {hotel.hotel_address || "Address not available"}
+                </AppText>
+                
+                <View style={styles.hotelMeta}>
+                  {hotel.rating && (
+                    <View style={styles.ratingContainer}>
+                      <Ionicons name="star" size={14} color={Colors.WARNING} />
+                      <AppText variant="caption" style={styles.ratingText}>
+                        {hotel.rating}
+                      </AppText>
+                    </View>
+                  )}
+                </View>
+                
+                <AppText variant="body2" style={styles.hotelDescription}>
+                  {hotel.description || "No description available"}
+                </AppText>
+                
+                {hotel.nearby_places && hotel.nearby_places.length > 0 && (
+                  <View style={styles.nearbyContainer}>
+                    <AppText variant="caption" color="secondary">NEARBY PLACES</AppText>
+                    {hotel.nearby_places.map((place, placeIndex) => (
+                      <View key={placeIndex} style={styles.nearbyItem}>
+                        <Ionicons name="location-outline" size={14} color={Colors.TEXT_SECONDARY} />
+                        <AppText variant="caption" color="secondary" style={styles.nearbyText}>
+                          {place.place_name} ({place.travel_time})
+                        </AppText>
+                      </View>
+                    ))}
                   </View>
                 )}
                 
                 {hotel.geo_coordinates && (
-                  <TouchableOpacity 
-                    style={styles.mapButton}
+                  <AppButton
+                    title="View on Map"
+                    size="small"
+                    variant="outline"
+                    icon={<Ionicons name="map-outline" size={16} color={Colors.TEXT_PRIMARY} style={{marginRight: 8}} />}
                     onPress={() => {
                       const url = `https://www.google.com/maps/search/?api=1&query=${hotel.geo_coordinates.latitude},${hotel.geo_coordinates.longitude}`;
                       Linking.openURL(url);
                     }}
-                  >
-                    <Ionicons name="location-outline" size={16} color={Colors.WHITE} />
-                    <Text style={styles.mapButtonText}>View on Map</Text>
-                  </TouchableOpacity>
+                    style={styles.mapButton}
+                  />
                 )}
-              </View>
-              
-              <Text style={styles.cardDescription}>{hotel.description}</Text>
-              
-              {hotel.nearby_places && hotel.nearby_places.length > 0 && (
-                <View style={styles.nearbyContainer}>
-                  <Text style={styles.nearbyTitle}>Nearby Places</Text>
-                  {hotel.nearby_places.map((place, placeIndex) => (
-                    <View key={placeIndex} style={styles.nearbyItem}>
-                      <Ionicons name="pin-outline" size={16} color={Colors.GRAY} />
-                      <Text style={styles.nearbyText}>
-                        {place.place_name} ({place.travel_time})
-                      </Text>
+              </AppCard>
+            ))}
+          </View>
+        )}
+
+        {/* Daily Itinerary */}
+        {tripPlan.daily_plan && Object.keys(tripPlan.daily_plan).length > 0 && (
+          <View style={styles.section}>
+            <AppText variant="h4" style={styles.sectionTitle}>Daily Itinerary</AppText>
+            
+            {Object.entries(tripPlan.daily_plan).map(([day, plan], index) => (
+              <AppCard key={index} style={styles.dayCard}>
+                <View style={styles.dayHeader}>
+                  <View>
+                    <AppText variant="body2" color="primary" style={styles.dayLabel}>
+                      {day.toUpperCase().replace(/DAY/, 'DAY ')}
+                    </AppText>
+                    <AppText variant="subtitle1">{plan.theme || day}</AppText>
+                  </View>
+                </View>
+                
+                {plan.activities && plan.activities.map((activity, actIndex) => (
+                  <View key={actIndex} style={styles.activityItem}>
+                    <View style={styles.timelineContainer}>
+                      <AppText variant="caption" style={styles.activityTime}>
+                        {activity.time || "--:--"}
+                      </AppText>
+                      <View style={styles.timelineDot} />
+                      <View style={[
+                        styles.timelineConnector,
+                        actIndex === plan.activities.length - 1 && styles.lastConnector
+                      ]} />
                     </View>
-                  ))}
+                    
+                    <View style={styles.activityContent}>
+                      <AppText variant="subtitle2">{activity.activity || "Activity"}</AppText>
+                      <AppText variant="body2" color="secondary" style={styles.activityDetails}>
+                        {activity.details || "No details available"}
+                      </AppText>
+                      
+                      {activity.image_url && (
+                        <Image
+                          source={{ uri: activity.image_url }}
+                          style={styles.activityImage}
+                          defaultSource={require('./../../assets/images/adaptive-icon.png')}
+                        />
+                      )}
+                      
+                      <View style={styles.activityMetaContainer}>
+                        {activity.duration && (
+                          <View style={styles.metaBadge}>
+                            <Ionicons name="time-outline" size={14} color={Colors.TEXT_SECONDARY} />
+                            <AppText variant="caption" color="secondary" style={styles.metaBadgeText}>
+                              {activity.duration}
+                            </AppText>
+                          </View>
+                        )}
+                        
+                        {activity.travel_time && (
+                          <View style={styles.metaBadge}>
+                            <Ionicons name="car-outline" size={14} color={Colors.TEXT_SECONDARY} />
+                            <AppText variant="caption" color="secondary" style={styles.metaBadgeText}>
+                              {activity.travel_time}
+                            </AppText>
+                          </View>
+                        )}
+                        
+                        {activity.ticket_price && (
+                          <View style={styles.metaBadge}>
+                            <Ionicons name="pricetag-outline" size={14} color={Colors.TEXT_SECONDARY} />
+                            <AppText variant="caption" color="secondary" style={styles.metaBadgeText}>
+                              {activity.ticket_price}
+                            </AppText>
+                          </View>
+                        )}
+                      </View>
+                      
+                      {activity.geo_coordinates && (
+                        <TouchableOpacity
+                          style={styles.locationButton}
+                          onPress={() => {
+                            const url = `https://www.google.com/maps/search/?api=1&query=${activity.geo_coordinates.latitude},${activity.geo_coordinates.longitude}`;
+                            Linking.openURL(url);
+                          }}
+                        >
+                          <Ionicons name="location-outline" size={14} color={Colors.PRIMARY} />
+                          <AppText variant="caption" color="primary" style={styles.locationButtonText}>
+                            View on Map
+                          </AppText>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </AppCard>
+            ))}
+          </View>
+        )}
+
+        {/* Total Cost Breakdown */}
+        {(tripPlan.cost_breakdown || tripPlan.total_trip_cost) && (
+          <View style={styles.section}>
+            <AppText variant="h4" style={styles.sectionTitle}>Trip Cost</AppText>
+            <AppCard style={styles.costCard}>
+              {tripPlan.cost_breakdown && (
+                Object.entries(tripPlan.cost_breakdown).map(([category, cost], index) => (
+                  <View key={index} style={styles.costItem}>
+                    <AppText variant="body2" color="secondary">{category}</AppText>
+                    <AppText variant="subtitle2">{cost}</AppText>
+                  </View>
+                ))
+              )}
+              
+              {!tripPlan.cost_breakdown && tripPlan.total_trip_cost && (
+                <View style={styles.costItem}>
+                  <AppText variant="body2" color="secondary">Total</AppText>
+                  <AppText variant="subtitle2">{tripPlan.total_trip_cost}</AppText>
                 </View>
               )}
-            </View>
-          ))}
-        </View>
-      )}
-
-      {/* Daily Itinerary */}
-      {tripPlan.daily_plan && Object.keys(tripPlan.daily_plan).length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Daily Itinerary</Text>
-          {Object.entries(tripPlan.daily_plan).map(([day, plan], index) => (
-            <View key={index} style={styles.itineraryCard}>
-              <Text style={styles.dayTitle}>
-                {day.toUpperCase()}: {plan.theme}
-              </Text>
               
-              {plan.activities && plan.activities.map((activity, actIndex) => (
-                <View key={actIndex} style={styles.activityItem}>
-                  <View style={styles.activityTime}>
-                    <Text style={styles.timeText}>{activity.time}</Text>
-                    <View style={[
-                      styles.timeConnector,
-                      actIndex === plan.activities.length - 1 ? styles.lastConnector : {}
-                    ]} />
-                  </View>
-                  
-                  <View style={styles.activityContent}>
-                    <Text style={styles.activityTitle}>{activity.activity}</Text>
-                    <Text style={styles.activityDetails}>{activity.details}</Text>
-                    
-                    {activity.image_url && (
-                      <Image
-                        source={{ uri: activity.image_url }}
-                        style={styles.activityImage}
-                        defaultSource={require('./../../assets/images/adaptive-icon.png')}
-                      />
-                    )}
-                    
-                    <View style={styles.activityMetaContainer}>
-                      {activity.duration && (
-                        <View style={styles.metaBadge}>
-                          <Ionicons name="time-outline" size={14} color={Colors.GRAY} />
-                          <Text style={styles.metaBadgeText}>{activity.duration}</Text>
-                        </View>
-                      )}
-                      
-                      {activity.travel_time && (
-                        <View style={styles.metaBadge}>
-                          <Ionicons name="car-outline" size={14} color={Colors.GRAY} />
-                          <Text style={styles.metaBadgeText}>{activity.travel_time}</Text>
-                        </View>
-                      )}
-                      
-                      {activity.ticket_price && (
-                        <View style={styles.metaBadge}>
-                          <Ionicons name="pricetag-outline" size={14} color={Colors.GRAY} />
-                          <Text style={styles.metaBadgeText}>{activity.ticket_price}</Text>
-                        </View>
-                      )}
-                    </View>
-                    
-                    {activity.geo_coordinates && (
-                      <TouchableOpacity
-                        style={styles.mapButtonSmall}
-                        onPress={() => {
-                          const url = `https://www.google.com/maps/search/?api=1&query=${activity.geo_coordinates.latitude},${activity.geo_coordinates.longitude}`;
-                          Linking.openURL(url);
-                        }}
-                      >
-                        <Ionicons name="location-outline" size={12} color={Colors.WHITE} />
-                        <Text style={styles.mapButtonTextSmall}>View on Map</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
+              {tripPlan.total_trip_cost && tripPlan.cost_breakdown && (
+                <View style={styles.totalCostItem}>
+                  <AppText variant="subtitle2" color="primary">Total</AppText>
+                  <AppText variant="subtitle1" color="primary">{tripPlan.total_trip_cost}</AppText>
                 </View>
-              ))}
-            </View>
-          ))}
-        </View>
-      )}
-
-      {/* Total Cost Breakdown */}
-      {(tripPlan.cost_breakdown || tripPlan.total_trip_cost) && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Trip Cost</Text>
-          <View style={styles.card}>
-            {tripPlan.cost_breakdown && (
-              Object.entries(tripPlan.cost_breakdown).map(([category, cost], index) => (
-                <View key={index} style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>{category}:</Text>
-                  <Text style={styles.infoText}>{cost}</Text>
-                </View>
-              ))
-            )}
-            
-            {!tripPlan.cost_breakdown && tripPlan.total_trip_cost && (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Total:</Text>
-                <Text style={styles.infoText}>{tripPlan.total_trip_cost}</Text>
-              </View>
-            )}
+              )}
+            </AppCard>
           </View>
-        </View>
-      )}
+        )}
 
-      <View style={styles.footer}>
-        <TouchableOpacity 
-          style={styles.buttonSecondary} 
-          onPress={() => router.back()}
-        >
-          <Text style={styles.buttonSecondaryText}>Back to My Trips</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+        <View style={styles.footer}>
+          <AppButton 
+            title="Back to My Trips" 
+            onPress={() => router.back()}
+            variant="outline"
+            fullWidth
+          />
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.WHITE,
-  },
-  header: {
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-    zIndex: 10,
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.22,
-    shadowRadius: 2.22,
-    elevation: 3,
+    backgroundColor: Colors.BACKGROUND_DARK,
   },
   heroContainer: {
-    position: 'relative',
     height: 300,
+    position: 'relative',
+    overflow: 'hidden',
   },
   heroImage: {
     width: '100%',
-    height: 300,
+    height: '100%',
     resizeMode: 'cover',
   },
   gradient: {
@@ -414,340 +503,312 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: 150,
+    height: 180,
     justifyContent: 'flex-end',
     padding: 20,
   },
-  tripName: {
-    fontFamily: 'outfit-Medium',
-    fontSize: 16,
-    color: Colors.WHITE,
-    opacity: 0.9,
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
-  heroTitle: {
-    fontFamily: 'outfit-Bold',
-    fontSize: 28,
-    color: Colors.WHITE,
-    marginTop: 4,
+  heroContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 20,
   },
-  tripMeta: {
+  locationText: {
+    marginVertical: 8,
+    color: Colors.WHITE,
+    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  metaInfo: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     marginTop: 8,
+    flexWrap: 'wrap',
   },
-  tripMetaText: {
-    fontFamily: 'outfit-Regular',
-    fontSize: 16,
-    color: Colors.WHITE,
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 20,
+    marginVertical: 4,
+  },
+  metaText: {
+    marginLeft: 5,
+  },
+  content: {
+    flex: 1,
+    paddingTop: 5,
   },
   section: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   sectionTitle: {
-    fontFamily: 'outfit-Bold',
-    fontSize: 22,
     marginBottom: 15,
   },
-  card: {
-    backgroundColor: '#f9f9f9',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3.84,
-    elevation: 2,
+  summaryCard: {
+    padding: 0,
   },
-  subCard: {
-    backgroundColor: Colors.WHITE,
-    borderRadius: 10,
-    padding: 14,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: '#eeeeee',
-  },
-  subCardTitle: {
-    fontFamily: 'outfit-Medium',
-    fontSize: 16,
-    marginBottom: 10,
-    color: Colors.BLACK,
-  },
-  cardTitle: {
-    fontFamily: 'outfit-Bold',
-    fontSize: 18,
-    marginBottom: 5,
-    color: Colors.BLACK,
-  },
-  cardSubtitle: {
-    fontFamily: 'outfit-Regular',
-    fontSize: 14,
-    color: Colors.GRAY,
-    marginBottom: 12,
-  },
-  cardDescription: {
-    fontFamily: 'outfit-Regular',
-    fontSize: 15,
-    marginTop: 12,
-    lineHeight: 22,
-  },
-  hotelDetailsRow: {
+  summaryItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  summaryTextContainer: {
+    marginLeft: 15,
+  },
+  totalCostContainer: {
+    padding: 15,
+    backgroundColor: 'rgba(108, 99, 255, 0.1)',
+    borderRadius: 0,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+  },
+  flightCard: {
+    padding: 0,
+  },
+  flightHeader: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  flightRoute: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    paddingRight: 10,
+  },
+  flightRouteConnector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    flex: 1,
+  },
+  flightLine: {
+    height: 1,
+    backgroundColor: Colors.TEXT_TERTIARY,
+    flex: 1,
+  },
+  airlineBadge: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+  },
+  priceContainer: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  exampleFlightContainer: {
+    padding: 15,
+  },
+  exampleFlightDetails: {
+    marginTop: 10,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 8,
+    padding: 10,
+  },
+  flightDetail: {
+    marginVertical: 5,
+  },
+  bookButton: {
+    margin: 15,
+    marginTop: 5,
+  },
+  hotelCard: {
+    marginBottom: 15,
+    padding: 15,
+  },
+  hotelAddress: {
+    marginTop: 3,
+    marginBottom: 12,
+  },
+  hotelMeta: {
+    flexDirection: 'row',
+    marginBottom: 12,
   },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    backgroundColor: 'rgba(255, 193, 7, 0.1)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
   ratingText: {
-    fontFamily: 'outfit-Medium',
-    fontSize: 14,
     marginLeft: 4,
-    color: '#A68A00',
+    color: Colors.WARNING,
   },
-  mapButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.BLACK,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-  },
-  mapButtonText: {
-    fontFamily: 'outfit-Medium',
-    fontSize: 12,
-    color: Colors.WHITE,
-    marginLeft: 4,
-  },
-  mapButtonSmall: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: Colors.BLACK,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  mapButtonTextSmall: {
-    fontFamily: 'outfit-Regular',
-    fontSize: 11,
-    color: Colors.WHITE,
-    marginLeft: 3,
+  hotelDescription: {
+    marginVertical: 12,
+    lineHeight: 20,
   },
   nearbyContainer: {
-    marginTop: 14,
-    backgroundColor: 'rgba(0, 0, 0, 0.02)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
     padding: 12,
     borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#ddd',
-  },
-  nearbyTitle: {
-    fontFamily: 'outfit-Medium',
-    fontSize: 15,
-    marginBottom: 8,
+    marginTop: 12,
+    marginBottom: 15,
   },
   nearbyItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 5,
-  },
-  nearbyText: {
-    fontFamily: 'outfit-Regular',
-    fontSize: 14,
-    color: Colors.GRAY,
-    marginLeft: 6,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  infoLabel: {
-    fontFamily: 'outfit-Medium',
-    fontSize: 15,
-    width: 80,
-  },
-  infoText: {
-    fontFamily: 'outfit-Regular',
-    fontSize: 15,
-    flex: 1,
-    marginLeft: 8,
-    color: Colors.BLACK,
-  },
-  linkButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.BLUE,
-    padding: 12,
-    borderRadius: 8,
     marginTop: 8,
   },
-  linkButtonText: {
-    fontFamily: 'outfit-Medium',
-    fontSize: 14,
-    color: Colors.WHITE,
-    marginLeft: 8,
+  nearbyText: {
+    marginLeft: 6,
   },
-  itineraryCard: {
-    backgroundColor: '#f9f9f9',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2.22,
-    elevation: 2,
+  mapButton: {
+    alignSelf: 'flex-start',
   },
-  dayTitle: {
-    fontFamily: 'outfit-Bold',
-    fontSize: 18,
-    marginBottom: 16,
-    color: Colors.BLACK,
+  dayCard: {
+    marginBottom: 15,
+    padding: 15,
+  },
+  dayHeader: {
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    paddingBottom: 10,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+    paddingBottom: 12,
+    marginBottom: 16,
+  },
+  dayLabel: {
+    marginBottom: 4,
   },
   activityItem: {
     flexDirection: 'row',
-    marginBottom: 5,
+    marginBottom: 18,
   },
-  activityTime: {
+  timelineContainer: {
     width: 60,
     alignItems: 'center',
-    marginRight: 5,
+    position: 'relative',
+    paddingTop: 3,
   },
-  timeText: {
-    fontFamily: 'outfit-Medium',
-    fontSize: 14,
-    backgroundColor: Colors.BLACK,
+  activityTime: {
+    backgroundColor: Colors.PRIMARY,
     color: Colors.WHITE,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 12,
     overflow: 'hidden',
+    fontSize: 12,
   },
-  timeConnector: {
+  timelineDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.PRIMARY,
+    marginTop: 10,
+  },
+  timelineConnector: {
     width: 2,
-    height: '100%',
-    backgroundColor: Colors.GRAY,
-    marginTop: 4,
-    alignSelf: 'center',
+    position: 'absolute',
+    top: 35,
+    bottom: 0,
+    backgroundColor: 'rgba(108, 99, 255, 0.3)',
   },
   lastConnector: {
-    height: 20,  // shorter for the last activity
+    height: 15,
   },
   activityContent: {
     flex: 1,
-    marginLeft: 8,
-    backgroundColor: Colors.WHITE,
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 14,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.BLACK,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 1,
-  },
-  activityTitle: {
-    fontFamily: 'outfit-Bold',
-    fontSize: 16,
-    marginBottom: 6,
+    paddingLeft: 10,
   },
   activityDetails: {
-    fontFamily: 'outfit-Regular',
-    fontSize: 14,
+    marginTop: 5,
+    marginBottom: 10,
     lineHeight: 20,
-    color: Colors.BLACK,
   },
   activityImage: {
     width: '100%',
-    height: 120,
+    height: 150,
     borderRadius: 8,
-    marginTop: 10,
-    marginBottom: 10,
+    marginBottom: 15,
   },
   activityMetaContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 10,
     gap: 8,
+    marginBottom: 10,
   },
   metaBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
   metaBadgeText: {
-    fontFamily: 'outfit-Regular',
-    fontSize: 12,
-    color: Colors.GRAY,
     marginLeft: 4,
+  },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+  },
+  locationButtonText: {
+    marginLeft: 4,
+  },
+  costCard: {
+    padding: 0,
+  },
+  costItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  totalCostItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    backgroundColor: 'rgba(108, 99, 255, 0.1)',
   },
   footer: {
     padding: 20,
+    paddingTop: 10,
     paddingBottom: 40,
-  },
-  buttonPrimary: {
-    backgroundColor: Colors.BLACK,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  buttonPrimaryText: {
-    fontFamily: 'outfit-Medium',
-    fontSize: 16,
-    color: Colors.WHITE,
-  },
-  buttonSecondary: {
-    backgroundColor: '#f0f0f0',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  buttonSecondaryText: {
-    fontFamily: 'outfit-Medium',
-    fontSize: 16,
-    color: Colors.BLACK,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.WHITE,
-    padding: 30,
+    backgroundColor: Colors.BACKGROUND_DARK,
   },
   loadingText: {
-    fontFamily: 'outfit-Regular',
-    fontSize: 16,
-    marginTop: 16,
+    marginTop: 15,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.WHITE,
+    backgroundColor: Colors.BACKGROUND_DARK,
     padding: 30,
   },
   errorText: {
-    fontFamily: 'outfit-Medium',
-    fontSize: 18,
     marginBottom: 20,
     textAlign: 'center',
   },

@@ -1,0 +1,1 @@
+// This file has been removed to avoid route conflicts with index.js
